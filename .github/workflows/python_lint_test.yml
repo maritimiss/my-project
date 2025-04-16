@@ -1,0 +1,54 @@
+# Имя workflow, отображается во вкладке Actions в GitHub
+name: Python package
+
+# Условия запуска: при push или pull request в ветку main
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+# Определение работы (job) с именем "build"
+jobs:
+  build:
+
+    # job запускается на Ubuntu Linux
+    runs-on: ubuntu-latest
+
+    # Стратегия запуска job — для разных версий Python
+    strategy:
+      fail-fast: false  # если одна сборка падает — другие продолжаются
+      matrix:
+        python-version: [ "3.9", "3.10", "3.11" ]  # список версий Python
+
+    # Список шагов — выполняются по очереди
+    steps:
+
+      # Скачиваем код из репозитория
+      - uses: actions/checkout@v4
+
+      # Устанавливаем нужную версию Python (из matrix)
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v3
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      # Устанавливаем зависимости
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip  
+          python -m pip install flake8 pytest  
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi  
+
+      # Проверка кода на ошибки и стиль с помощью flake8
+      - name: Lint with flake8
+        run: |
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+          
+          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+      # Запуск тестов с помощью pytest
+      - name: Test with pytest
+        run: |
+          pytest
+    # запуск всех тестов
